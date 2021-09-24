@@ -1,16 +1,19 @@
 package com.bee.beedoc.util;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.FileVisitOption;
+import java.io.PrintWriter;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class IOUtils {
     private static final Logger LOGGER = Logger.getLogger(IOUtils.class.getName());
@@ -24,8 +27,10 @@ public class IOUtils {
             return;
         }
         File touch = new File(dir, fileName);
-        try (FileWriter fileWriter = new FileWriter(touch)) {
-            fileWriter.write(content);
+        try (FileWriter fileWriter = new FileWriter(touch, true);
+             BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+             PrintWriter printWriter = new PrintWriter(bufferedWriter)) {
+            printWriter.println(content);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "new file failed", e);
         } finally {
@@ -33,16 +38,22 @@ public class IOUtils {
         }
     }
 
-//    public static List<File> getAllFiles(Path dir) {
-//        List<File> files = new ArrayList<>();
-//        try {
-//            files = Files.find(dir, 10, ((path, basicFileAttributes) -> basicFileAttributes.isRegularFile()))
-//                    .map(Path::toFile).collect(Collectors.toList());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return files;
-//    }
-
+    public static List<Path> getAllFiles(Path dir) {
+        List<Path> paths = new ArrayList<>();
+        try {
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    if (attrs.isRegularFile()) {
+                        paths.add(file);
+                    }
+                    return super.visitFile(file, attrs);
+                }
+            });
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "walk though file error", e);
+        }
+        return paths;
+    }
 
 }
